@@ -42,7 +42,7 @@ $paths = [
 $xml = VMProvisioner::renderDomainXml($valid, $paths, '12345678-1234-4234-9234-123456789abc', '52:54:00:12:34:56');
 $document = new DOMDocument();
 check($document->loadXML($xml), 'generated libvirt XML parses');
-check(str_contains($xml, 'pc-q35-10.2'), 'XML follows VM.sh machine type');
+check(str_contains($xml, 'pc-q35-10.2'), 'XML follows vm.sh machine type');
 check(str_contains($xml, 'org.qemu.guest_agent.0'), 'XML includes guest-agent channel');
 
 $badName = $valid;
@@ -63,10 +63,10 @@ $custom['profile'] = 'custom';
 $custom['image_source'] = 'https://example.com/cloud.qcow2';
 check(VMProvisioner::validateSpec($custom) === [], 'custom HTTPS image is accepted');
 
-check(is_file(dirname(__DIR__) . '/VM.sh'), 'standalone VM.sh is present in repository root');
+check(is_file(dirname(__DIR__) . '/vm.sh'), 'standalone vm.sh is present in repository root');
 check(
-    VMProvisioner::EMBEDDED_SCRIPT === '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/VM.sh',
-    'PHP provisioner refers to the packaged standalone VM.sh path'
+    VMProvisioner::EMBEDDED_SCRIPT === '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh',
+    'PHP provisioner refers to the packaged standalone vm.sh path'
 );
 
 echo "{$tests} tests passed.\n";

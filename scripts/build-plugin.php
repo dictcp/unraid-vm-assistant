@@ -4,14 +4,14 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$version = $argv[1] ?? '2026.08.29.2';
+$version = $argv[1] ?? '2026.08.29.3';
 if (!preg_match('/^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$/', $version)) {
     fwrite(STDERR, "Version must look like YYYY.MM.DD.N\n");
     exit(2);
 }
 
 $files = [
-    '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/VM.sh' => [$root . '/VM.sh', '0755'],
+    '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh' => [$root . '/vm.sh', '0755'],
     '/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMCreationAssistant.page' => [$root . '/src/VMCreationAssistant.page', '0644'],
     '/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib/VMProvisioner.php' => [$root . '/src/lib/VMProvisioner.php', '0644'],
     '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/create-vm.php' => [$root . '/src/scripts/create-vm.php', '0755'],
@@ -49,8 +49,8 @@ $plugin = <<<PLG
 <CHANGES>
 <![CDATA[
 ### {$version}
-- Initial PHP-only VM Creation Assistant based on VM.sh.
-- Packages VM.sh as a standalone executable and delegates provisioning to it.
+- Initial PHP-only VM Creation Assistant based on vm.sh.
+- Packages vm.sh as a standalone executable and delegates provisioning to it.
 - Supports Ubuntu 26.04/24.04, Debian 13, Fedora 43, and custom qcow2 images.
 - Creates cloud-init users, installs SSH keys and qemu-guest-agent, then registers the VM in Unraid.
 - Uses only Unraid's PHP and native virtualization/filesystem commands; no Go binary or Docker container.

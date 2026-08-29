@@ -21,21 +21,21 @@ if ($scripts === false || $scripts->length !== 2) {
     exit(1);
 }
 
-$vmScriptPath = dirname(__DIR__) . '/VM.sh';
+$vmScriptPath = dirname(__DIR__) . '/vm.sh';
 $vmScript = file_get_contents($vmScriptPath);
 if ($vmScript === false) {
-    fwrite(STDERR, "Could not read standalone VM.sh.\n");
+    fwrite(STDERR, "Could not read standalone vm.sh.\n");
     exit(1);
 }
 $installerWithoutWhitespace = preg_replace('/\s+/', '', $scripts->item(0)->textContent);
 if (!is_string($installerWithoutWhitespace) || !str_contains($installerWithoutWhitespace, base64_encode($vmScript))) {
-    fwrite(STDERR, "Generated plugin does not contain the standalone VM.sh payload.\n");
+    fwrite(STDERR, "Generated plugin does not contain the standalone vm.sh payload.\n");
     exit(1);
 }
 
 $vmLint = proc_open(['/bin/bash', '-n'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $vmPipes);
 if (!is_resource($vmLint)) {
-    throw new RuntimeException('Could not launch bash for VM.sh validation.');
+    throw new RuntimeException('Could not launch bash for vm.sh validation.');
 }
 fwrite($vmPipes[0], $vmScript);
 fclose($vmPipes[0]);
@@ -43,7 +43,7 @@ fclose($vmPipes[1]);
 $vmError = stream_get_contents($vmPipes[2]);
 fclose($vmPipes[2]);
 if (proc_close($vmLint) !== 0) {
-    fwrite(STDERR, "Standalone VM.sh is invalid.\n{$vmError}");
+    fwrite(STDERR, "Standalone vm.sh is invalid.\n{$vmError}");
     exit(1);
 }
 
@@ -70,4 +70,4 @@ foreach ($scripts as $index => $node) {
     }
 }
 
-echo "Plugin XML, installer scripts, and packaged standalone VM.sh are valid.\n";
+echo "Plugin XML, installer scripts, and packaged standalone vm.sh are valid.\n";

@@ -1,8 +1,8 @@
 # VM Creation Assistant for Unraid — PHP edition
 
-This is a separate, PHP-only native Unraid plugin built around the bundled [`VM.sh`](VM.sh). It does not use the earlier Go provisioning backend and does not require Docker or `virt-install`.
+This is a separate, PHP-only native Unraid plugin built around the bundled [`vm.sh`](vm.sh). It does not use the earlier Go provisioning backend and does not require Docker or `virt-install`.
 
-`VM.sh` remains a normal standalone shell file in the repository. The package installs it at `/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/VM.sh`, and the detached PHP worker invokes that installed file with validated environment variables.
+`vm.sh` remains a normal standalone shell file in the repository. The package installs it at `/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh`, and the detached PHP worker invokes that installed file with validated environment variables.
 
 ## What it creates
 
@@ -28,7 +28,7 @@ resolve/download cached qcow2 image
 → copy per-VM OVMF VARS
 → generate Unraid/libvirt XML
 → virsh define
-→ start through VM.sh
+→ start through vm.sh
 → optionally enable libvirt autostart
 ```
 
@@ -36,7 +36,7 @@ The guest is configured for SSH-key-only access, passwordless sudo, and installs
 
 ## Runtime dependencies
 
-The plugin contains no compiled payload. It verifies the Unraid tools required by PHP and the bundled `VM.sh` during installation:
+The plugin contains no compiled payload. It verifies the Unraid tools required by PHP and the bundled `vm.sh` during installation:
 
 ```text
 /usr/bin/php
@@ -73,7 +73,7 @@ unraid-vm-assistant-php.plg
 ## Storage and safety
 
 - VM directories and custom local images are restricted to `/mnt/...`; the Unraid boot device is not accepted.
-- PHP invokes the packaged `VM.sh` with a `proc_open()` argument array and validated environment values.
+- PHP invokes the packaged `vm.sh` with a `proc_open()` argument array and validated environment values.
 - Long downloads and VM creation run in a detached PHP CLI worker; the WebGUI request does not remain open.
 - Image downloads are locked to prevent two jobs corrupting the same cache entry.
 - Every VM gets a full disk copy, so existing VMs never depend on the shared cache.
