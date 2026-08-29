@@ -1,6 +1,6 @@
-# VM Creation Assistant for Unraid — PHP edition
+# VM Creation Assistant for Unraid
 
-This is a separate, PHP-only native Unraid plugin built around the bundled [`vm.sh`](vm.sh). It does not use the earlier Go provisioning backend and does not require Docker or `virt-install`.
+VM Creation Assistant is a native Unraid plugin for provisioning ready-to-SSH Linux cloud VMs from the WebGUI. PHP handles the interface and background job orchestration, while the bundled [`vm.sh`](vm.sh) performs cloud-image, cloud-init, and libvirt provisioning. It does not require Docker or `virt-install`.
 
 `vm.sh` remains a normal standalone shell file in the repository. The package installs it at `/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh`, and the detached PHP worker invokes that installed file with validated environment variables.
 

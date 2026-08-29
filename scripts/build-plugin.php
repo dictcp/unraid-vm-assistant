@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$version = $argv[1] ?? '2026.08.29.3';
+$version = $argv[1] ?? '2026.08.29.4';
 if (!preg_match('/^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$/', $version)) {
     fwrite(STDERR, "Version must look like YYYY.MM.DD.N\n");
     exit(2);
@@ -53,7 +53,7 @@ $plugin = <<<PLG
 - Packages vm.sh as a standalone executable and delegates provisioning to it.
 - Supports Ubuntu 26.04/24.04, Debian 13, Fedora 43, and custom qcow2 images.
 - Creates cloud-init users, installs SSH keys and qemu-guest-agent, then registers the VM in Unraid.
-- Uses only Unraid's PHP and native virtualization/filesystem commands; no Go binary or Docker container.
+- Runs on Unraid's PHP and native virtualization/filesystem commands without a Docker container.
 ]]>
 </CHANGES>
 
