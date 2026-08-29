@@ -1,0 +1,250 @@
+Menu="Utilities"
+Title="VM Creation Assistant"
+Type="xmenu"
+Tabs="false"
+Markdown="false"
+---
+<?php
+require_once '/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib/VMProvisioner.php';
+
+function vmaEscape(mixed $value): string
+{
+    return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function vmaDefaultKeys(): string
+{
+    foreach (['/root/.ssh/id_ed25519.pub', '/root/.ssh/authorized_keys'] as $path) {
+        if (!is_file($path)) {
+            continue;
+        }
+        $keys = [];
+        foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+            $line = trim($line);
+            if (preg_match('/^(ssh-|ecdsa-|sk-)/', $line)) {
+                $keys[] = $line;
+            }
+        }
+        if ($keys !== []) {
+            return implode("\n", $keys);
+        }
+    }
+    return '';
+}
+
+function vmaJobPaths(string $name): array
+{
+    $base = VMProvisioner::JOB_ROOT . '/' . $name;
+    return [
+        'spec' => $base . '.json',
+        'log' => $base . '.log',
+        'status' => $base . '.status.json',
+    ];
+}
+
+function vmaReadJob(string $name): ?array
+{
+    if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/', $name)) {
+        return null;
+    }
+    $paths = vmaJobPaths($name);
+    $status = is_file($paths['status'])
+        ? json_decode((string)file_get_contents($paths['status']), true)
+        : null;
+    if (!is_array($status) && !is_file($paths['log'])) {
+        return null;
+    }
+    return [
+        'name' => $name,
+        'state' => is_array($status) ? (string)($status['state'] ?? 'queued') : 'queued',
+        'error' => is_array($status) ? (string)($status['error'] ?? '') : '',
+        'log' => is_file($paths['log']) ? (string)file_get_contents($paths['log']) : '',
+    ];
+}
+
+function vmaLaunchWorker(array $spec): void
+{
+    if (!is_dir(VMProvisioner::JOB_ROOT) && !mkdir(VMProvisioner::JOB_ROOT, 0700, true)) {
+        throw new RuntimeException('Could not create temporary job directory.');
+    }
+    chmod(dirname(VMProvisioner::JOB_ROOT), 0700);
+    chmod(VMProvisioner::JOB_ROOT, 0700);
+    $name = (string)$spec['name'];
+    $paths = vmaJobPaths($name);
+    foreach ($paths as $path) {
+        @unlink($path);
+    }
+    $json = json_encode($spec, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
+    if (file_put_contents($paths['spec'], $json, LOCK_EX) === false || !chmod($paths['spec'], 0600)) {
+        throw new RuntimeException('Could not write VM job specification.');
+    }
+    $worker = '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/create-vm.php';
+    $php = '/usr/bin/php';
+    $setsid = '/usr/bin/setsid';
+    foreach ([$worker, $php, $setsid] as $path) {
+        if (!is_file($path) || !is_executable($path)) {
+            throw new RuntimeException("Required worker executable is unavailable: {$path}");
+        }
+    }
+    $command = [
+        $setsid, '-f', $php, $worker,
+        '--spec', $paths['spec'],
+        '--log', $paths['log'],
+        '--status', $paths['status'],
+    ];
+    $descriptors = [
+        0 => ['file', '/dev/null', 'r'],
+        1 => ['file', '/dev/null', 'a'],
+        2 => ['file', '/dev/null', 'a'],
+    ];
+    $process = proc_open($command, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
+    if (!is_resource($process)) {
+        throw new RuntimeException('Could not launch VM creation worker.');
+    }
+    $exitCode = proc_close($process);
+    if ($exitCode !== 0) {
+        throw new RuntimeException("VM creation worker launcher exited with code {$exitCode}.");
+    }
+}
+
+$profiles = VMProvisioner::profiles();
+$values = VMProvisioner::normalizeSpec([
+    'profile' => 'ubuntu-26.04',
+    'name' => '',
+    'username' => 'ubuntu',
+    'ssh_keys' => vmaDefaultKeys(),
+    'ram_mb' => 2048,
+    'vcpus' => 2,
+    'disk_gib' => 20,
+    'bridge' => 'br0',
+    'domains_dir' => '/mnt/user/domains',
+    'start' => true,
+    'autostart' => false,
+]);
+$errors = [];
+$message = '';
+$selectedJob = trim((string)($_GET['job'] ?? ''));
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'create') {
+    $values = VMProvisioner::normalizeSpec([
+        'profile' => $_POST['profile'] ?? '',
+        'image_source' => $_POST['image_source'] ?? '',
+        'name' => $_POST['name'] ?? '',
+        'username' => $_POST['username'] ?? '',
+        'ssh_keys' => $_POST['ssh_keys'] ?? '',
+        'ram_mb' => $_POST['ram_mb'] ?? 0,
+        'vcpus' => $_POST['vcpus'] ?? 0,
+        'disk_gib' => $_POST['disk_gib'] ?? 0,
+        'bridge' => $_POST['bridge'] ?? '',
+        'domains_dir' => $_POST['domains_dir'] ?? '',
+        'start' => true,
+        'autostart' => isset($_POST['autostart']),
+    ]);
+    $errors = VMProvisioner::validateSpec($values);
+    if ($errors === []) {
+        try {
+            vmaLaunchWorker($values);
+            $selectedJob = (string)$values['name'];
+            $message = 'VM creation queued. The first image download can take several minutes; subsequent VMs reuse the cache.';
+        } catch (Throwable $error) {
+            $errors[] = $error->getMessage();
+        }
+    }
+}
+
+$job = $selectedJob !== '' ? vmaReadJob($selectedJob) : null;
+$jobState = $job['state'] ?? '';
+$jobClass = $jobState === 'complete' ? 'is-complete' : ($jobState === 'failed' ? 'is-failed' : 'is-running');
+?>
+<style>
+.vma-shell{max-width:1180px;margin:0 auto;padding:8px 0 30px;color:inherit}.vma-hero{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:18px;padding:22px 24px;border-radius:12px;background:linear-gradient(135deg,#202a36,#35465a);color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.12)}.vma-hero h2{margin:0 0 8px;color:#fff;font-size:24px}.vma-hero p{max-width:720px;margin:0;color:#d0d8e2;line-height:1.5}.vma-badge{padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.13);white-space:nowrap;font-size:11px;font-weight:800}.vma-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}.vma-stack{display:grid;gap:16px}.vma-card{padding:20px;border:1px solid rgba(127,127,127,.24);border-radius:11px;background:rgba(127,127,127,.045);box-shadow:0 2px 8px rgba(0,0,0,.04)}.vma-card h3{margin:0 0 5px;font-size:16px}.vma-help{margin:0 0 16px;opacity:.68;font-size:12px;line-height:1.45}.vma-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px 18px}.vma-three{grid-template-columns:repeat(3,minmax(0,1fr))}.vma-field{display:grid;gap:6px}.vma-full{grid-column:1/-1}.vma-field label{font-size:12px;font-weight:700}.vma-field small{opacity:.65;font-size:11px;line-height:1.4}.vma-shell input[type=text],.vma-shell input[type=number],.vma-shell select,.vma-shell textarea{box-sizing:border-box;width:100%;min-height:38px;padding:8px 10px;border:1px solid rgba(127,127,127,.38);border-radius:6px;background:var(--input-bg,#fff);color:inherit}.vma-shell textarea{min-height:92px;resize:vertical;font:12px/1.5 monospace}.vma-summary{position:sticky;top:16px}.vma-summary dl{display:grid;grid-template-columns:1fr auto;gap:11px 12px;margin:16px 0}.vma-summary dt{opacity:.65}.vma-summary dd{margin:0;text-align:right;font-weight:700}.vma-toggle{display:flex;gap:10px;align-items:flex-start;padding:10px 0}.vma-toggle input{margin-top:3px}.vma-toggle strong{display:block;font-size:13px}.vma-toggle span span{display:block;margin-top:3px;opacity:.65;font-size:11px;line-height:1.35}.vma-create{width:100%;margin-top:8px;padding:11px 14px;border:0;border-radius:7px;background:#ff8c2a;color:#fff;font-weight:800;cursor:pointer}.vma-create:hover{background:#ed7917}.vma-note{margin:14px 0 0;padding-top:13px;border-top:1px solid rgba(127,127,127,.2);opacity:.65;font-size:11px;line-height:1.45}.vma-alert{margin-bottom:15px;padding:12px 14px;border-radius:7px;white-space:pre-wrap}.vma-error{background:#fde8e8;color:#8b1e1e}.vma-message{background:#e8f5ea;color:#1f6c2d}.vma-job{margin-top:18px}.vma-log{max-height:340px;overflow:auto;margin-top:12px;padding:14px;border-radius:7px;background:#151a20;color:#dbe4ee;white-space:pre-wrap;font:12px/1.55 monospace}.vma-state{display:inline-block;margin-left:8px;padding:3px 8px;border-radius:999px;font-size:11px}.is-running .vma-state{background:#fff2d9;color:#8a5700}.is-complete .vma-state{background:#dff4e4;color:#166529}.is-failed .vma-state{background:#fde0e0;color:#8b1e1e}.vma-custom[hidden]{display:none}@media(prefers-color-scheme:dark){.vma-shell input[type=text],.vma-shell input[type=number],.vma-shell select,.vma-shell textarea{--input-bg:#20252b}}@media(max-width:860px){.vma-layout{grid-template-columns:1fr}.vma-summary{position:static}}@media(max-width:560px){.vma-grid,.vma-three{grid-template-columns:1fr}.vma-hero{display:block}.vma-badge{display:inline-block;margin-top:15px}}
+</style>
+<div class="vma-shell">
+  <div class="vma-hero">
+    <div><h2>New Linux cloud VM</h2><p>A native PHP assistant based on VM.sh. Choose a qcow2 cloud image, configure cloud-init login, and register a standard VM in Unraid.</p></div>
+    <div class="vma-badge">PHP UI · VM.SH PROVISIONER · NO DOCKER</div>
+  </div>
+
+  <?php if ($message !== ''): ?><div class="vma-alert vma-message"><?= vmaEscape($message) ?></div><?php endif; ?>
+  <?php if ($errors !== []): ?><div class="vma-alert vma-error"><?= vmaEscape(implode("\n", $errors)) ?></div><?php endif; ?>
+
+  <form method="post" id="vma-form">
+    <input id="vma-csrf-token" type="hidden" name="csrf_token" value="<?= vmaEscape($csrf_token ?? '') ?>">
+    <input type="hidden" name="action" value="create">
+    <div class="vma-layout">
+      <div class="vma-stack">
+        <section class="vma-card">
+          <h3>Cloud image</h3><p class="vma-help">Built-in images are downloaded once to a shared cache. Every VM receives an independent full qcow2 copy.</p>
+          <div class="vma-grid">
+            <div class="vma-field vma-full"><label for="profile">Distribution</label><select id="profile" name="profile">
+              <?php foreach ($profiles as $id => $profile): ?><option value="<?= vmaEscape($id) ?>" data-user="<?= vmaEscape($profile['username']) ?>" <?= $values['profile'] === $id ? 'selected' : '' ?>><?= vmaEscape($profile['label']) ?></option><?php endforeach; ?>
+            </select></div>
+            <div class="vma-field vma-full vma-custom" id="custom-image-field" hidden><label for="image_source">Custom qcow2 URL or local path</label><input id="image_source" name="image_source" type="text" value="<?= vmaEscape($values['image_source']) ?>" placeholder="https://example/image.qcow2 or /mnt/user/isos/image.qcow2"><small>Local paths are restricted to <code>/mnt/...</code>. Remote images must be HTTP(S).</small></div>
+          </div>
+        </section>
+
+        <section class="vma-card">
+          <h3>Identity & cloud-init</h3><p class="vma-help">The selected user receives passwordless sudo. Password and root SSH login remain disabled.</p>
+          <div class="vma-grid">
+            <div class="vma-field"><label for="name">VM name</label><input id="name" name="name" type="text" required maxlength="63" value="<?= vmaEscape($values['name']) ?>" placeholder="ubuntu-01"></div>
+            <div class="vma-field"><label for="username">Default username</label><input id="username" name="username" type="text" required maxlength="32" value="<?= vmaEscape($values['username']) ?>"></div>
+            <div class="vma-field vma-full"><label for="ssh_keys">SSH public keys</label><textarea id="ssh_keys" name="ssh_keys" required placeholder="One OpenSSH public key per line"><?= vmaEscape($values['ssh_keys']) ?></textarea><small>Defaults to <code>/root/.ssh/id_ed25519.pub</code>, then <code>authorized_keys</code>, when present.</small></div>
+          </div>
+        </section>
+
+        <section class="vma-card">
+          <h3>Resources & placement</h3><p class="vma-help">Defaults match VM.sh. The guest installs qemu-guest-agent during first boot.</p>
+          <div class="vma-grid vma-three">
+            <div class="vma-field"><label for="vcpus">vCPUs</label><input id="vcpus" name="vcpus" type="number" min="1" max="64" value="<?= vmaEscape($values['vcpus']) ?>" required></div>
+            <div class="vma-field"><label for="ram_mb">RAM · MiB</label><input id="ram_mb" name="ram_mb" type="number" min="512" max="262144" step="256" value="<?= vmaEscape($values['ram_mb']) ?>" required></div>
+            <div class="vma-field"><label for="disk_gib">Disk · GiB</label><input id="disk_gib" name="disk_gib" type="number" min="8" max="4096" value="<?= vmaEscape($values['disk_gib']) ?>" required></div>
+            <div class="vma-field vma-full"><label for="domains_dir">Domains directory</label><input id="domains_dir" name="domains_dir" type="text" value="<?= vmaEscape($values['domains_dir']) ?>" required><small>VM directory: <code id="vm-path-preview"></code></small></div>
+            <div class="vma-field vma-full"><label for="bridge">Network bridge</label><input id="bridge" name="bridge" type="text" maxlength="32" value="<?= vmaEscape($values['bridge']) ?>" required><small><code>br0</code> puts the VM directly on the LAN using DHCP.</small></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="vma-card vma-summary">
+        <h3>Creation summary</h3>
+        <dl><dt>Image</dt><dd id="summary-image"></dd><dt>Login</dt><dd id="summary-user"></dd><dt>Compute</dt><dd id="summary-compute"></dd><dt>Disk</dt><dd id="summary-disk"></dd><dt>Network</dt><dd id="summary-network"></dd><dt>Seed</dt><dd>VFAT CIDATA</dd></dl>
+        <input type="hidden" name="start" value="1">
+        <div class="vma-toggle"><span><strong>Starts after creation</strong><span>The bundled VM.sh starts every newly defined VM.</span></span></div>
+        <label class="vma-toggle"><input type="checkbox" name="autostart" value="1" <?= $values['autostart'] ? 'checked' : '' ?>><span><strong>Autostart with array</strong><span>Enable libvirt autostart.</span></span></label>
+        <button class="vma-create" type="submit">Create VM</button>
+        <p class="vma-note">The worker runs as root because it must define libvirt domains and create NVRAM. Inputs are validated twice and commands bypass the shell.</p>
+      </aside>
+    </div>
+  </form>
+
+  <?php if ($job): ?>
+  <section class="vma-card vma-job <?= vmaEscape($jobClass) ?>">
+    <h3><?= vmaEscape($job['name']) ?><span class="vma-state"><?= vmaEscape(strtoupper($job['state'])) ?></span></h3>
+    <?php if ($job['error'] !== ''): ?><div class="vma-alert vma-error"><?= vmaEscape($job['error']) ?></div><?php endif; ?>
+    <div class="vma-log"><?= vmaEscape($job['log'] !== '' ? $job['log'] : 'Waiting for worker output…') ?></div>
+  </section>
+  <?php endif; ?>
+</div>
+<script>
+if (typeof csrf_token !== 'undefined') document.getElementById('vma-csrf-token').value = csrf_token;
+(function(){
+  const byId=id=>document.getElementById(id), profile=byId('profile'), username=byId('username');
+  function update(){
+    const selected=profile.options[profile.selectedIndex], isCustom=profile.value==='custom';
+    byId('custom-image-field').hidden=!isCustom;
+    byId('summary-image').textContent=selected.textContent.trim();
+    byId('summary-user').textContent=username.value||'—';
+    byId('summary-compute').textContent=byId('vcpus').value+' CPU · '+(Number(byId('ram_mb').value||0)/1024)+' GiB';
+    byId('summary-disk').textContent=byId('disk_gib').value+' GiB';
+    byId('summary-network').textContent=byId('bridge').value+' · DHCP';
+    byId('vm-path-preview').textContent=byId('domains_dir').value.replace(/\/+$/,'')+'/'+(byId('name').value||'vm-name');
+  }
+  profile.addEventListener('change',function(){username.value=profile.options[profile.selectedIndex].dataset.user;update();});
+  ['name','username','vcpus','ram_mb','disk_gib','bridge','domains_dir'].forEach(id=>byId(id).addEventListener('input',update));
+  update();
+<?php if ($job && in_array($job['state'], ['queued', 'running'], true)): ?>
+  window.setTimeout(()=>window.location.replace('?job=<?= rawurlencode((string)$job['name']) ?>'),3000);
+<?php elseif ($message !== '' && $selectedJob !== ''): ?>
+  window.setTimeout(()=>window.location.replace('?job=<?= rawurlencode($selectedJob) ?>'),1000);
+<?php endif; ?>
+})();
+</script>

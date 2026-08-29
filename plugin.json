@@ -1,0 +1,7 @@
+{
+  "name": "VM Creation Assistant",
+  "description": "Create ready-to-SSH Linux cloud VMs from the Unraid WebGUI using built-in PHP and native virtualization tools.",
+  "category": "Tools:System",
+  "support": "https://github.com/dictcp/unraid-vm-assistant",
+  "repository": "https://github.com/dictcp/unraid-vm-assistant"
+}
