@@ -1,0 +1,30 @@
+Menu="VMs:99"
+Cond="(pgrep('libvirtd')!==false)"
+Markdown="false"
+---
+<script>
+(function () {
+  function addCloudVMButton() {
+    const addVMButton = document.getElementById('btnAddVM');
+    if (!addVMButton || document.getElementById('btnAddCloudVM')) return;
+
+    const cloudVMButton = document.createElement('input');
+    cloudVMButton.type = 'button';
+    cloudVMButton.id = 'btnAddCloudVM';
+    cloudVMButton.value = <?= json_encode(_('Create Cloud VM'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    cloudVMButton.style.display = addVMButton.style.display;
+    cloudVMButton.disabled = addVMButton.disabled;
+    cloudVMButton.addEventListener('click', function () {
+      window.location.assign('/Settings/VMCreationAssistant');
+    });
+
+    addVMButton.insertAdjacentElement('afterend', cloudVMButton);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addCloudVMButton, {once: true});
+  } else {
+    addCloudVMButton();
+  }
+})();
+</script>

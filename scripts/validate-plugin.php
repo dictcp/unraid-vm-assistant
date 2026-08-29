@@ -21,18 +21,20 @@ if ($scripts === false || $scripts->length !== 2) {
     exit(1);
 }
 
-$vmScriptPath = dirname(__DIR__) . '/vm.sh';
-$vmScript = file_get_contents($vmScriptPath);
-if ($vmScript === false) {
-    fwrite(STDERR, "Could not read standalone vm.sh.\n");
-    exit(1);
-}
 $installerWithoutWhitespace = preg_replace('/\s+/', '', $scripts->item(0)->textContent);
-if (!is_string($installerWithoutWhitespace) || !str_contains($installerWithoutWhitespace, base64_encode($vmScript))) {
-    fwrite(STDERR, "Generated plugin does not contain the standalone vm.sh payload.\n");
-    exit(1);
+foreach (['vm.sh', 'src/VMManagerIntegration.page'] as $payloadPath) {
+    $payload = file_get_contents(dirname(__DIR__) . '/' . $payloadPath);
+    if ($payload === false) {
+        fwrite(STDERR, "Could not read package payload: {$payloadPath}.\n");
+        exit(1);
+    }
+    if (!is_string($installerWithoutWhitespace) || !str_contains($installerWithoutWhitespace, base64_encode($payload))) {
+        fwrite(STDERR, "Generated plugin does not contain payload: {$payloadPath}.\n");
+        exit(1);
+    }
 }
 
+$vmScript = (string)file_get_contents(dirname(__DIR__) . '/vm.sh');
 $vmLint = proc_open(['/bin/bash', '-n'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $vmPipes);
 if (!is_resource($vmLint)) {
     throw new RuntimeException('Could not launch bash for vm.sh validation.');

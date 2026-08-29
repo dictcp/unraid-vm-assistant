@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$version = $argv[1] ?? '2026.08.29.4';
+$version = $argv[1] ?? '2026.08.29.5';
 if (!preg_match('/^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$/', $version)) {
     fwrite(STDERR, "Version must look like YYYY.MM.DD.N\n");
     exit(2);
@@ -13,6 +13,7 @@ if (!preg_match('/^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$/', $version)) {
 $files = [
     '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh' => [$root . '/vm.sh', '0755'],
     '/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMCreationAssistant.page' => [$root . '/src/VMCreationAssistant.page', '0644'],
+    '/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMManagerIntegration.page' => [$root . '/src/VMManagerIntegration.page', '0644'],
     '/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib/VMProvisioner.php' => [$root . '/src/lib/VMProvisioner.php', '0644'],
     '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/create-vm.php' => [$root . '/src/scripts/create-vm.php', '0755'],
     '/usr/local/emhttp/plugins/unraid-vm-assistant-php/README.md' => [$root . '/README.md', '0644'],
@@ -54,6 +55,7 @@ $plugin = <<<PLG
 - Supports Ubuntu 26.04/24.04, Debian 13, Fedora 43, and custom qcow2 images.
 - Creates cloud-init users, installs SSH keys and qemu-guest-agent, then registers the VM in Unraid.
 - Runs on Unraid's PHP and native virtualization/filesystem commands without a Docker container.
+- Adds a Create Cloud VM button beside Add VM in Unraid VM Manager.
 ]]>
 </CHANGES>
 

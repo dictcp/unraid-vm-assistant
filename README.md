@@ -6,7 +6,12 @@ VM Creation Assistant is a native Unraid plugin for provisioning ready-to-SSH Li
 
 ## What it creates
 
-From **Settings → User Utilities → VM Creation Assistant**, select:
+Open the assistant from either entrypoint:
+
+- **VMs → Create Cloud VM**, beside Unraid's standard **Add VM** button
+- **Settings → User Utilities → VM Creation Assistant**
+
+Then select:
 
 - Ubuntu Server 26.04 LTS
 - Ubuntu Server 24.04 LTS
@@ -33,6 +38,8 @@ resolve/download cached qcow2 image
 ```
 
 The guest is configured for SSH-key-only access, passwordless sudo, and installs/enables `qemu-guest-agent` on first boot.
+
+The VM Manager button is installed through a no-title `VMs` child page. It does not modify Unraid's built-in VM Manager files, and removing the plugin removes the integration automatically.
 
 ## Runtime dependencies
 

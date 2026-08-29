@@ -69,4 +69,9 @@ check(
     'PHP provisioner refers to the packaged standalone vm.sh path'
 );
 
+$integrationPage = (string)file_get_contents(dirname(__DIR__) . '/src/VMManagerIntegration.page');
+check(str_contains($integrationPage, 'Menu="VMs:99"'), 'VM Manager integration is registered as a VMs child page');
+check(str_contains($integrationPage, "id = 'btnAddCloudVM'"), 'VM Manager integration creates an idempotent cloud VM button');
+check(str_contains($integrationPage, "'/Settings/VMCreationAssistant'"), 'cloud VM button targets the existing assistant');
+
 echo "{$tests} tests passed.\n";
