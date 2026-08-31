@@ -81,6 +81,12 @@ The generated install manifest is:
 unraid-vm-assistant-php.plg
 ```
 
+## Publishing a version
+
+Create and push a version tag matching `YYYY.MM.DD.N`. The `Update plugin manifest` GitHub workflow checks out `main`, confirms that every runtime source exists in the tag, runs the manifest generator with that tag, validates the result, and commits the updated `.plg` back to `main` as `github-actions[bot]`.
+
+The tag provides the immutable runtime sources; the install URL remains the generated `.plg` on `main`. The workflow does not create packages, checksums, or a GitHub Release. It can also be run manually for an existing tag from the Actions page.
+
 ## Storage and safety
 
 - VM directories and custom local images are restricted to `/mnt/...`; the Unraid boot device is not accepted.

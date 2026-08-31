@@ -4,9 +4,16 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$version = $argv[1] ?? '2026.08.31.1';
-if (!preg_match('/^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$/', $version)) {
-    fwrite(STDERR, "Version must look like YYYY.MM.DD.N\n");
+$pluginPath = $root . '/unraid-vm-assistant-php.plg';
+$version = $argv[1] ?? null;
+if ($version === null && is_file($pluginPath)) {
+    $currentPlugin = (string)file_get_contents($pluginPath);
+    if (preg_match('/<PLUGIN\b[^>]*\bversion="([^"]+)"/s', $currentPlugin, $matches)) {
+        $version = $matches[1];
+    }
+}
+if (!is_string($version) || !preg_match('/^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$/', $version)) {
+    fwrite(STDERR, "Pass a version that looks like YYYY.MM.DD.N, or keep a valid generated plugin manifest.\n");
     exit(2);
 }
 
@@ -127,7 +134,7 @@ echo "VM Creation Assistant removed. Existing VMs and /mnt image caches were pre
 </PLUGIN>
 PLG;
 
-$output = $root . '/unraid-vm-assistant-php.plg';
+$output = $pluginPath;
 if (file_put_contents($output, $plugin) === false) {
     throw new RuntimeException("Could not write {$output}");
 }
