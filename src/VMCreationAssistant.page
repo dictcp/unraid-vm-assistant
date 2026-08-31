@@ -208,7 +208,7 @@ $jobClass = $jobState === 'complete' ? 'is-complete' : ($jobState === 'failed' ?
         <h3>Creation summary</h3>
         <dl><dt>Image</dt><dd id="summary-image"></dd><dt>Login</dt><dd id="summary-user"></dd><dt>Compute</dt><dd id="summary-compute"></dd><dt>Disk</dt><dd id="summary-disk"></dd><dt>Network</dt><dd id="summary-network"></dd><dt>Seed</dt><dd>VFAT CIDATA</dd></dl>
         <input type="hidden" name="start" value="1">
-        <div class="vma-toggle"><span><strong>Starts after creation</strong><span>The bundled vm.sh starts every newly defined VM.</span></span></div>
+        <div class="vma-toggle"><span><strong>Starts after creation</strong><span>The installed vm.sh starts every newly defined VM.</span></span></div>
         <label class="vma-toggle"><input type="checkbox" name="autostart" value="1" <?= $values['autostart'] ? 'checked' : '' ?>><span><strong>Autostart with array</strong><span>Enable libvirt autostart.</span></span></label>
         <button class="vma-create" type="submit">Create VM</button>
         <p class="vma-note">The worker runs as root because it must define libvirt domains and create NVRAM. Inputs are validated twice and commands bypass the shell.</p>

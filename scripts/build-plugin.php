@@ -4,33 +4,50 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$version = $argv[1] ?? '2026.08.29.5';
+$version = $argv[1] ?? '2026.08.31.1';
 if (!preg_match('/^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$/', $version)) {
     fwrite(STDERR, "Version must look like YYYY.MM.DD.N\n");
     exit(2);
 }
 
+$stageRoot = '/tmp/unraid-vm-assistant-php/' . $version;
+$rawRoot = 'https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/' . $version;
 $files = [
-    '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh' => [$root . '/vm.sh', '0755'],
-    '/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMCreationAssistant.page' => [$root . '/src/VMCreationAssistant.page', '0644'],
-    '/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMManagerIntegration.page' => [$root . '/src/VMManagerIntegration.page', '0644'],
-    '/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib/VMProvisioner.php' => [$root . '/src/lib/VMProvisioner.php', '0644'],
-    '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/create-vm.php' => [$root . '/src/scripts/create-vm.php', '0755'],
-    '/usr/local/emhttp/plugins/unraid-vm-assistant-php/README.md' => [$root . '/README.md', '0644'],
+    'src/scripts/vm.sh' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh', '0755'],
+    'src/VMCreationAssistant.page' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMCreationAssistant.page', '0644'],
+    'src/VMManagerIntegration.page' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMManagerIntegration.page', '0644'],
+    'src/lib/VMProvisioner.php' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib/VMProvisioner.php', '0644'],
+    'src/scripts/create-vm.php' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/create-vm.php', '0755'],
+    'README.md' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/README.md', '0644'],
 ];
 
-$payload = '';
-foreach ($files as $destination => [$source, $mode]) {
-    $contents = file_get_contents($source);
-    if ($contents === false) {
-        throw new RuntimeException("Could not read {$source}");
+$downloads = '';
+$installCommands = '';
+$destinationDirectories = [];
+foreach ($files as $source => [$destination, $mode]) {
+    if (!is_file($root . '/' . $source)) {
+        throw new RuntimeException("Source file does not exist: {$source}");
     }
-    $encoded = chunk_split(base64_encode($contents), 76, "\n");
-    $marker = 'VMA_' . strtoupper(substr(hash('sha256', $destination), 0, 16));
-    $destinationArg = escapeshellarg($destination);
-    $payload .= "mkdir -p " . escapeshellarg(dirname($destination)) . "\n";
-    $payload .= "base64 -d > {$destinationArg} <<'{$marker}'\n{$encoded}{$marker}\n";
-    $payload .= "chmod {$mode} {$destinationArg}\n\n";
+    $staged = $stageRoot . '/' . $source;
+    $url = $rawRoot . '/' . $source;
+    $downloads .= <<<XML
+<FILE Name="{$staged}">
+<URL>{$url}</URL>
+</FILE>
+
+XML;
+    $destinationDirectories[dirname($destination)] = true;
+    $installCommands .= sprintf(
+        "install -m %s %s %s\n",
+        $mode,
+        escapeshellarg($staged),
+        escapeshellarg($destination),
+    );
+}
+
+$directoryCommands = '';
+foreach (array_keys($destinationDirectories) as $directory) {
+    $directoryCommands .= 'mkdir -p ' . escapeshellarg($directory) . "\n";
 }
 
 $plugin = <<<PLG
@@ -50,42 +67,43 @@ $plugin = <<<PLG
 <CHANGES>
 <![CDATA[
 ### {$version}
-- Initial PHP-only VM Creation Assistant based on vm.sh.
-- Packages vm.sh as a standalone executable and delegates provisioning to it.
+- Installs normal repository files directly from the matching immutable Git tag.
+- Keeps vm.sh as a standalone source file and delegates provisioning to its installed copy.
 - Supports Ubuntu 26.04/24.04, Debian 13, Fedora 43, and custom qcow2 images.
 - Creates cloud-init users, installs SSH keys and qemu-guest-agent, then registers the VM in Unraid.
-- Runs on Unraid's PHP and native virtualization/filesystem commands without a Docker container.
+- Runs on Unraid's PHP and native virtualization/filesystem commands without Docker or virt-install.
 - Adds a Create Cloud VM button beside Add VM in Unraid VM Manager.
 ]]>
 </CHANGES>
 
-<FILE Run="/bin/bash">
+{$downloads}<FILE Run="/bin/bash">
 <INLINE>
 <![CDATA[
 #!/bin/bash
-set -e
+set -euo pipefail
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 PLUGIN_NAME="unraid-vm-assistant-php"
 PLUGIN_DIR="/boot/config/plugins/\${PLUGIN_NAME}"
-WEB_DIR="/usr/local/emhttp/plugins/\${PLUGIN_NAME}"
+STAGE_DIR="{$stageRoot}"
 
 if [ ! -d /boot/config/plugins ]; then
   echo "ERROR: This plugin must be installed on Unraid." >&2
   exit 1
 fi
 
-for command in php virsh qemu-img jq curl truncate mkfs.vfat mcopy blkid mount umount setsid base64; do
+for command in php virsh qemu-img jq curl truncate mkfs.vfat mcopy blkid mount umount setsid install; do
   if ! command -v "\${command}" >/dev/null 2>&1; then
     echo "ERROR: Required Unraid command is missing: \${command}" >&2
     exit 1
   fi
 done
 
-mkdir -p "\${PLUGIN_DIR}" "\${WEB_DIR}"
+mkdir -p "\${PLUGIN_DIR}"
 chmod 700 "\${PLUGIN_DIR}"
 
-{$payload}
+{$directoryCommands}{$installCommands}
+rm -rf "\${STAGE_DIR}"
 echo "VM Creation Assistant installed under Settings -> User Utilities."
 ]]>
 </INLINE>
@@ -95,9 +113,10 @@ echo "VM Creation Assistant installed under Settings -> User Utilities."
 <INLINE>
 <![CDATA[
 #!/bin/bash
-set -e
+set -euo pipefail
 
 rm -rf /usr/local/emhttp/plugins/unraid-vm-assistant-php
+rm -rf /tmp/unraid-vm-assistant-php
 rm -rf /tmp/unraid-vm-assistant
 rm -rf /boot/config/plugins/unraid-vm-assistant-php
 echo "VM Creation Assistant removed. Existing VMs and /mnt image caches were preserved."
@@ -109,13 +128,7 @@ echo "VM Creation Assistant removed. Existing VMs and /mnt image caches were pre
 PLG;
 
 $output = $root . '/unraid-vm-assistant-php.plg';
-$dist = $root . '/dist/unraid-vm-assistant-php-' . $version . '.plg';
-if (!is_dir(dirname($dist)) && !mkdir(dirname($dist), 0755, true)) {
-    throw new RuntimeException('Could not create dist directory.');
+if (file_put_contents($output, $plugin) === false) {
+    throw new RuntimeException("Could not write {$output}");
 }
-foreach ([$output, $dist] as $path) {
-    if (file_put_contents($path, $plugin) === false) {
-        throw new RuntimeException("Could not write {$path}");
-    }
-}
-echo "Built {$output}\nBuilt {$dist}\n";
+echo "Built {$output}\n";

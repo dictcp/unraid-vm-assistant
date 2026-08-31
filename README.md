@@ -1,8 +1,8 @@
 # VM Creation Assistant for Unraid
 
-VM Creation Assistant is a native Unraid plugin for provisioning ready-to-SSH Linux cloud VMs from the WebGUI. PHP handles the interface and background job orchestration, while the bundled [`vm.sh`](vm.sh) performs cloud-image, cloud-init, and libvirt provisioning. It does not require Docker or `virt-install`.
+VM Creation Assistant is a native Unraid plugin for provisioning ready-to-SSH Linux cloud VMs from the WebGUI. PHP handles the interface and background job orchestration, while the standalone [`vm.sh`](src/scripts/vm.sh) performs cloud-image, cloud-init, and libvirt provisioning. It does not require Docker or `virt-install`.
 
-`vm.sh` remains a normal standalone shell file in the repository. The package installs it at `/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh`, and the detached PHP worker invokes that installed file with validated environment variables.
+`vm.sh` is a normal source file beside the PHP worker in `src/scripts/`. The plugin manifest downloads it from the matching Git tag, installs it at `/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh`, and invokes that installed file with validated environment variables.
 
 ## What it creates
 
@@ -43,7 +43,7 @@ The VM Manager button is installed through a no-title `VMs` child page. It does 
 
 ## Runtime dependencies
 
-The plugin contains no compiled payload. It verifies the Unraid tools required by PHP and the bundled `vm.sh` during installation:
+The plugin contains no compiled or embedded payload. It verifies the Unraid tools required by PHP and the installed `vm.sh` during installation:
 
 ```text
 /usr/bin/php
@@ -58,12 +58,16 @@ blkid
 mount
 umount
 setsid
-base64
+install
 ```
 
 It also expects Unraid's QEMU 10.2 and OVMF paths used by `vm.sh`, so the plugin currently requires Unraid 7.3.0 or newer.
 
-## Build and validate
+## Delivery, build, and validation
+
+The installable [`unraid-vm-assistant-php.plg`](unraid-vm-assistant-php.plg) is a small manifest. Its six `<FILE>` entries download normal repository files from the immutable release tag into a versioned `/tmp` staging directory. A lifecycle hook then copies them into Unraid's live WebGUI plugin directory with explicit file modes.
+
+There are no checksums, encoded source payloads, package archives, generated `dist/` copies, or GitHub Release assets. Published tags must not be moved, and the repository must remain public so Unraid can fetch the raw files without GitHub credentials.
 
 Use the installed `mise` runtime locally:
 
@@ -71,7 +75,7 @@ Use the installed `mise` runtime locally:
 mise run validate
 ```
 
-The generated installable plugin is:
+The generated install manifest is:
 
 ```text
 unraid-vm-assistant-php.plg
@@ -80,7 +84,7 @@ unraid-vm-assistant-php.plg
 ## Storage and safety
 
 - VM directories and custom local images are restricted to `/mnt/...`; the Unraid boot device is not accepted.
-- PHP invokes the packaged `vm.sh` with a `proc_open()` argument array and validated environment values.
+- PHP invokes the installed `vm.sh` with a `proc_open()` argument array and validated environment values.
 - Long downloads and VM creation run in a detached PHP CLI worker; the WebGUI request does not remain open.
 - Image downloads are locked to prevent two jobs corrupting the same cache entry.
 - Every VM gets a full disk copy, so existing VMs never depend on the shared cache.

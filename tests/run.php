@@ -63,10 +63,10 @@ $custom['profile'] = 'custom';
 $custom['image_source'] = 'https://example.com/cloud.qcow2';
 check(VMProvisioner::validateSpec($custom) === [], 'custom HTTPS image is accepted');
 
-check(is_file(dirname(__DIR__) . '/vm.sh'), 'standalone vm.sh is present in repository root');
+check(is_file(dirname(__DIR__) . '/src/scripts/vm.sh'), 'standalone vm.sh source is present with the worker scripts');
 check(
-    VMProvisioner::EMBEDDED_SCRIPT === '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh',
-    'PHP provisioner refers to the packaged standalone vm.sh path'
+    VMProvisioner::VM_SCRIPT_PATH === '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh',
+    'PHP provisioner refers to the installed standalone vm.sh path'
 );
 
 $integrationPage = (string)file_get_contents(dirname(__DIR__) . '/src/VMManagerIntegration.page');

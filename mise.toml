@@ -10,9 +10,10 @@ description = "Build the installable Unraid plugin"
 run = "php scripts/build-plugin.php"
 
 [tasks.validate]
-description = "Test, build, and lint the complete plugin package"
+description = "Test, build, and lint the complete plugin manifest"
 depends = ["test", "build"]
 run = [
+  "bash -n src/scripts/vm.sh",
   "php -l src/VMCreationAssistant.page",
   "php -l src/VMManagerIntegration.page",
   "php -l src/lib/VMProvisioner.php",

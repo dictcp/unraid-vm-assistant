@@ -661,4 +661,3 @@ echo
 echo "  virsh domifaddr '${NAME}' --source agent"
 echo "  ssh ${USER_NAME}@<IP>"
 echo
-

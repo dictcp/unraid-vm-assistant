@@ -67,7 +67,7 @@ final class VMProvisioner
 {
     public const PLUGIN_NAME = 'unraid-vm-assistant-php';
     public const JOB_ROOT = '/tmp/unraid-vm-assistant/jobs';
-    public const EMBEDDED_SCRIPT = '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh';
+    public const VM_SCRIPT_PATH = '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh';
 
     /** @return array<string,array<string,string>> */
     public static function profiles(): array
@@ -309,8 +309,8 @@ XML;
         }
         $runner = new VMCommandRunner($logPath);
         $name = (string)$spec['name'];
-        if (!is_file(self::EMBEDDED_SCRIPT) || !is_executable(self::EMBEDDED_SCRIPT)) {
-            throw new VMProvisionException('Packaged vm.sh is missing or not executable: ' . self::EMBEDDED_SCRIPT);
+        if (!is_file(self::VM_SCRIPT_PATH) || !is_executable(self::VM_SCRIPT_PATH)) {
+            throw new VMProvisionException('Installed vm.sh is missing or not executable: ' . self::VM_SCRIPT_PATH);
         }
 
         $environment = [
@@ -329,8 +329,8 @@ XML;
             $environment['IMAGE_URL'] = (string)$spec['image_source'];
         }
 
-        $runner->append("Delegating VM creation to packaged vm.sh\n");
-        $runner->run(['/bin/bash', self::EMBEDDED_SCRIPT, $name], $environment);
+        $runner->append("Delegating VM creation to installed vm.sh\n");
+        $runner->run(['/bin/bash', self::VM_SCRIPT_PATH, $name], $environment);
         if ($spec['autostart']) {
             $virsh = self::findExecutable('virsh');
             if ($virsh === null) {
@@ -338,7 +338,7 @@ XML;
             }
             $runner->run([$virsh, 'autostart', $name]);
         }
-        return ['name' => $name, 'script' => self::EMBEDDED_SCRIPT];
+        return ['name' => $name, 'script' => self::VM_SCRIPT_PATH];
     }
 
     /** @return array<string,string> */
