@@ -29,6 +29,14 @@ $valid = VMProvisioner::normalizeSpec([
 ]);
 check(VMProvisioner::validateSpec($valid) === [], 'valid specification is accepted');
 
+$defaults = VMProvisioner::normalizeSpec([
+    'profile' => 'ubuntu-26.04',
+    'ssh_keys' => 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest default@host',
+]);
+check(preg_match('/^cloud-vm-[a-f0-9]{6}$/', (string)$defaults['name']) === 1, 'empty VM name receives a usable random default');
+check($defaults['domains_dir'] === VMProvisioner::DEFAULT_DOMAINS_DIR, 'domains directory uses the fixed default');
+check($defaults['bridge'] === VMProvisioner::DEFAULT_BRIDGE, 'network bridge uses the fixed default');
+
 $userData = VMProvisioner::renderUserData($valid);
 check(str_contains($userData, 'name: "alice"'), 'cloud-init contains username');
 check(substr_count($userData, 'ssh-') === 2, 'cloud-init contains all SSH keys');
@@ -63,6 +71,14 @@ $custom['profile'] = 'custom';
 $custom['image_source'] = 'https://example.com/cloud.qcow2';
 check(VMProvisioner::validateSpec($custom) === [], 'custom HTTPS image is accepted');
 
+$keyUrl = $valid;
+$keyUrl['ssh_keys'] = 'https://github.com/example.keys';
+check(VMProvisioner::validateSpec($keyUrl) === [], 'HTTP(S) SSH public-key URL is accepted');
+
+$badKeyUrl = $valid;
+$badKeyUrl['ssh_keys'] = 'ftp://example.com/keys';
+check(VMProvisioner::validateSpec($badKeyUrl) !== [], 'non-HTTP SSH public-key URL is rejected');
+
 check(is_file(dirname(__DIR__) . '/src/scripts/vm.sh'), 'standalone vm.sh source is present with the worker scripts');
 check(
     VMProvisioner::VM_SCRIPT_PATH === '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh',
@@ -73,5 +89,12 @@ $integrationPage = (string)file_get_contents(dirname(__DIR__) . '/src/VMManagerI
 check(str_contains($integrationPage, 'Menu="VMs:99"'), 'VM Manager integration is registered as a VMs child page');
 check(str_contains($integrationPage, "id = 'btnAddCloudVM'"), 'VM Manager integration creates an idempotent cloud VM button');
 check(str_contains($integrationPage, "'/Settings/VMCreationAssistant'"), 'cloud VM button targets the existing assistant');
+
+$assistantPage = (string)file_get_contents(dirname(__DIR__) . '/src/VMCreationAssistant.page');
+check(!str_contains($assistantPage, 'name="domains_dir"'), 'assistant does not expose the fixed domains directory');
+check(!str_contains($assistantPage, 'name="bridge"'), 'assistant does not expose the fixed network bridge');
+check(str_contains($assistantPage, 'SSH public keys or URL'), 'assistant explains SSH public-key URL support');
+check(str_contains($assistantPage, 'var(--input-bg-color,transparent)') && !str_contains($assistantPage, 'prefers-color-scheme'), 'assistant follows Unraid theme variables');
+check(!str_contains($assistantPage, 'PHP UI · VM.SH PROVISIONER · NO DOCKER') && !str_contains($assistantPage, 'A native PHP assistant based on vm.sh'), 'assistant omits implementation badges and copy');
 
 echo "{$tests} tests passed.\n";

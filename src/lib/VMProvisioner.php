@@ -68,6 +68,13 @@ final class VMProvisioner
     public const PLUGIN_NAME = 'unraid-vm-assistant-php';
     public const JOB_ROOT = '/tmp/unraid-vm-assistant/jobs';
     public const VM_SCRIPT_PATH = '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh';
+    public const DEFAULT_BRIDGE = 'br0';
+    public const DEFAULT_DOMAINS_DIR = '/mnt/user/domains';
+
+    public static function defaultVmName(): string
+    {
+        return 'cloud-vm-' . bin2hex(random_bytes(3));
+    }
 
     /** @return array<string,array<string,string>> */
     public static function profiles(): array
@@ -117,17 +124,18 @@ final class VMProvisioner
         $profile = trim((string)($input['profile'] ?? 'ubuntu-26.04'));
         $profiles = self::profiles();
         $defaultUser = $profiles[$profile]['username'] ?? 'ubuntu';
+        $name = trim((string)($input['name'] ?? ''));
         return [
             'profile' => $profile,
             'image_source' => trim((string)($input['image_source'] ?? '')),
-            'name' => trim((string)($input['name'] ?? '')),
+            'name' => $name !== '' ? $name : self::defaultVmName(),
             'username' => trim((string)($input['username'] ?? $defaultUser)),
             'ssh_keys' => self::normalizeKeys((string)($input['ssh_keys'] ?? '')),
             'ram_mb' => (int)($input['ram_mb'] ?? 2048),
             'vcpus' => (int)($input['vcpus'] ?? 2),
             'disk_gib' => (int)($input['disk_gib'] ?? 20),
-            'bridge' => trim((string)($input['bridge'] ?? 'br0')),
-            'domains_dir' => rtrim(trim((string)($input['domains_dir'] ?? '/mnt/user/domains')), '/'),
+            'bridge' => trim((string)($input['bridge'] ?? self::DEFAULT_BRIDGE)),
+            'domains_dir' => rtrim(trim((string)($input['domains_dir'] ?? self::DEFAULT_DOMAINS_DIR)), '/'),
             'start' => self::toBool($input['start'] ?? true),
             'autostart' => self::toBool($input['autostart'] ?? false),
         ];
@@ -163,19 +171,22 @@ final class VMProvisioner
         if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,31}$/', (string)($spec['bridge'] ?? ''))) {
             $errors[] = 'Network bridge contains invalid characters.';
         }
-        $keys = preg_split('/\n/', (string)($spec['ssh_keys'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        if ($keys === []) {
-            $errors[] = 'At least one OpenSSH public key is required.';
-        }
-        foreach ($keys as $key) {
-            if (!self::validPublicKey($key)) {
-                $errors[] = 'One or more SSH public keys are invalid.';
-                break;
+        $keySource = (string)($spec['ssh_keys'] ?? '');
+        if (!self::isHttpUrl($keySource)) {
+            $keys = preg_split('/\n/', $keySource, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            if ($keys === []) {
+                $errors[] = 'At least one OpenSSH public key or an HTTP(S) key URL is required.';
+            }
+            foreach ($keys as $key) {
+                if (!self::validPublicKey($key)) {
+                    $errors[] = 'One or more SSH public keys are invalid.';
+                    break;
+                }
             }
         }
         if (($spec['profile'] ?? '') === 'custom') {
             $source = (string)($spec['image_source'] ?? '');
-            if (!self::isRemoteImage($source) && !self::isSafeMountPath($source)) {
+            if (!self::isHttpUrl($source) && !self::isSafeMountPath($source)) {
                 $errors[] = 'Custom image must be an HTTP(S) URL or an absolute local path below /mnt.';
             }
         }
@@ -367,7 +378,7 @@ XML;
 
     private function resolveImage(string $source, string $profile, string $cacheDir, array $commands, VMCommandRunner $runner): string
     {
-        if (!self::isRemoteImage($source)) {
+        if (!self::isHttpUrl($source)) {
             if (!is_file($source)) {
                 throw new VMProvisionException("Local image does not exist: {$source}");
             }
@@ -434,7 +445,7 @@ XML;
         return str_starts_with($path, '/mnt/') && !str_contains($path, "\0") && !preg_match('#(?:^|/)\.\.(?:/|$)#', $path);
     }
 
-    private static function isRemoteImage(string $source): bool
+    private static function isHttpUrl(string $source): bool
     {
         $scheme = strtolower((string)parse_url($source, PHP_URL_SCHEME));
         return in_array($scheme, ['http', 'https'], true) && filter_var($source, FILTER_VALIDATE_URL) !== false;

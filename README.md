@@ -19,7 +19,7 @@ Then select:
 - Fedora Cloud 43
 - or a custom remote/local qcow2 image
 
-Then provide a VM name, cloud-init username, one or more SSH public keys, vCPU, RAM, disk size, domains directory, and network bridge.
+Then provide a VM name, cloud-init username, one or more SSH public keys (or one HTTP(S) URL), vCPU, RAM, and disk size. The form generates a random `cloud-vm-xxxxxx` name by default and uses `/mnt/user/domains` with the `br0` network bridge automatically.
 
 The detached PHP worker performs the same workflow as `vm.sh`:
 
