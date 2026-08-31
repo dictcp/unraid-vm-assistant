@@ -97,4 +97,10 @@ check(str_contains($assistantPage, 'SSH public keys or URL'), 'assistant explain
 check(str_contains($assistantPage, 'var(--input-bg-color,transparent)') && !str_contains($assistantPage, 'prefers-color-scheme'), 'assistant follows Unraid theme variables');
 check(!str_contains($assistantPage, 'PHP UI · VM.SH PROVISIONER · NO DOCKER') && !str_contains($assistantPage, 'A native PHP assistant based on vm.sh'), 'assistant omits implementation badges and copy');
 
+$pluginDescription = trim((string)file_get_contents(dirname(__DIR__) . '/src/README.md'));
+$descriptionWords = preg_split('/\s+/u', $pluginDescription, -1, PREG_SPLIT_NO_EMPTY);
+check(is_array($descriptionWords) && count($descriptionWords) < 50, 'Plugin Manager description is under 50 words');
+check(preg_match('/[\r\n]/', $pluginDescription) !== 1, 'Plugin Manager description is a single line');
+check(!str_starts_with($pluginDescription, '#'), 'Plugin Manager description does not render a Markdown heading');
+
 echo "{$tests} tests passed.\n";

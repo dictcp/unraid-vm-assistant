@@ -25,7 +25,7 @@ $files = [
     'src/VMManagerIntegration.page' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMManagerIntegration.page', '0644'],
     'src/lib/VMProvisioner.php' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib/VMProvisioner.php', '0644'],
     'src/scripts/create-vm.php' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/create-vm.php', '0755'],
-    'README.md' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/README.md', '0644'],
+    'src/README.md' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/README.md', '0644'],
 ];
 
 $downloads = '';

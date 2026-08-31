@@ -67,6 +67,8 @@ It also expects Unraid's QEMU 10.2 and OVMF paths used by `vm.sh`, so the plugin
 
 The installable [`unraid-vm-assistant-php.plg`](unraid-vm-assistant-php.plg) is a small manifest. Its six `<FILE>` entries download normal repository files from the immutable release tag into a versioned `/tmp` staging directory. A lifecycle hook then copies them into Unraid's live WebGUI plugin directory with explicit file modes.
 
+[`src/README.md`](src/README.md) is the short, plain-text description displayed by Unraid Plugin Manager. This root README remains the full project documentation.
+
 There are no checksums, encoded source payloads, package archives, generated `dist/` copies, or GitHub Release assets. Published tags must not be moved, and the repository must remain public so Unraid can fetch the raw files without GitHub credentials.
 
 Use the installed `mise` runtime locally:

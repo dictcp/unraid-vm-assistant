@@ -34,8 +34,22 @@ $files = [
     'src/VMManagerIntegration.page' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMManagerIntegration.page', '0644'],
     'src/lib/VMProvisioner.php' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib/VMProvisioner.php', '0644'],
     'src/scripts/create-vm.php' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/create-vm.php', '0755'],
-    'README.md' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/README.md', '0644'],
+    'src/README.md' => ['/usr/local/emhttp/plugins/unraid-vm-assistant-php/README.md', '0644'],
 ];
+
+$descriptionPath = $root . '/src/README.md';
+$description = trim((string)file_get_contents($descriptionPath));
+$descriptionWords = preg_split('/\s+/u', $description, -1, PREG_SPLIT_NO_EMPTY);
+if (
+    $description === ''
+    || !is_array($descriptionWords)
+    || count($descriptionWords) >= 50
+    || preg_match('/[\r\n]/', $description) === 1
+    || preg_match('/(?:^|\s)#{1,6}\s|(?:^|\s)[-*+]\s|\[[^]]+]\([^)]+\)|<[^>]+>/', $description) === 1
+) {
+    fwrite(STDERR, "Plugin Manager description must be one plain-text line under 50 words.\n");
+    exit(1);
+}
 
 $xpath = new DOMXPath($document);
 $downloads = $xpath->query('/PLUGIN/FILE[URL]');
@@ -144,4 +158,4 @@ foreach ($scripts as $index => $node) {
     }
 }
 
-echo "Plugin XML, raw-file mappings, lifecycle hooks, and installed vm.sh source are valid.\n";
+echo "Plugin XML, short description, raw-file mappings, lifecycle hooks, and installed vm.sh source are valid.\n";

@@ -61,7 +61,7 @@ jobs:
             src/VMManagerIntegration.page \
             src/lib/VMProvisioner.php \
             src/scripts/create-vm.php \
-            README.md; do
+            src/README.md; do
             git cat-file -e "${TAG}:${source}"
           done
 
