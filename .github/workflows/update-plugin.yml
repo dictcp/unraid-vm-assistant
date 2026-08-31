@@ -31,8 +31,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Set up mise
-        uses: jdx/mise-action@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: dom
+          coverage: none
 
       - name: Write release tag to plugin manifest
         shell: bash
@@ -62,13 +66,13 @@ jobs:
           done
 
           CURRENT="$(sed -n 's/^[[:space:]]*version="\([^"]*\)".*/\1/p' unraid-vm-assistant-php.plg | head -n 1)"
-          if mise exec -- php -r 'exit(version_compare($argv[1], $argv[2], ">") ? 0 : 1);' "${CURRENT}" "${TAG}"; then
+          if php -r 'exit(version_compare($argv[1], $argv[2], ">") ? 0 : 1);' "${CURRENT}" "${TAG}"; then
             echo "Manifest version ${CURRENT} is newer than ${TAG}; skipping."
             exit 0
           fi
 
-          mise exec -- php scripts/build-plugin.php "${TAG}"
-          mise exec -- php scripts/validate-plugin.php
+          php scripts/build-plugin.php "${TAG}"
+          php scripts/validate-plugin.php
 
           if git diff --quiet -- unraid-vm-assistant-php.plg; then
             echo "Plugin manifest already uses ${TAG}."
