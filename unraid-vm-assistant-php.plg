@@ -4,7 +4,7 @@
 <PLUGIN
   name="unraid-vm-assistant-php"
   author="dictcp"
-  version="2026.08.31.1"
+  version="2026.08.31.2"
   launch="Settings/VMCreationAssistant"
   pluginURL="https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/main/unraid-vm-assistant-php.plg"
   support="https://github.com/dictcp/unraid-vm-assistant"
@@ -13,7 +13,7 @@
 
 <CHANGES>
 <![CDATA[
-### 2026.08.31.1
+### 2026.08.31.2
 - Installs normal repository files directly from the matching immutable Git tag.
 - Keeps vm.sh as a standalone source file and delegates provisioning to its installed copy.
 - Supports Ubuntu 26.04/24.04, Debian 13, Fedora 43, and custom qcow2 images.
@@ -23,23 +23,23 @@
 ]]>
 </CHANGES>
 
-<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.1/src/scripts/vm.sh">
-<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.1/src/scripts/vm.sh</URL>
+<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.2/src/scripts/vm.sh">
+<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.2/src/scripts/vm.sh</URL>
 </FILE>
-<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.1/src/VMCreationAssistant.page">
-<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.1/src/VMCreationAssistant.page</URL>
+<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.2/src/VMCreationAssistant.page">
+<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.2/src/VMCreationAssistant.page</URL>
 </FILE>
-<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.1/src/VMManagerIntegration.page">
-<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.1/src/VMManagerIntegration.page</URL>
+<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.2/src/VMManagerIntegration.page">
+<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.2/src/VMManagerIntegration.page</URL>
 </FILE>
-<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.1/src/lib/VMProvisioner.php">
-<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.1/src/lib/VMProvisioner.php</URL>
+<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.2/src/lib/VMProvisioner.php">
+<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.2/src/lib/VMProvisioner.php</URL>
 </FILE>
-<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.1/src/scripts/create-vm.php">
-<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.1/src/scripts/create-vm.php</URL>
+<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.2/src/scripts/create-vm.php">
+<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.2/src/scripts/create-vm.php</URL>
 </FILE>
-<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.1/README.md">
-<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.1/README.md</URL>
+<FILE Name="/tmp/unraid-vm-assistant-php/2026.08.31.2/README.md">
+<URL>https://raw.githubusercontent.com/dictcp/unraid-vm-assistant/2026.08.31.2/README.md</URL>
 </FILE>
 <FILE Run="/bin/bash">
 <INLINE>
@@ -50,7 +50,7 @@ set -euo pipefail
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 PLUGIN_NAME="unraid-vm-assistant-php"
 PLUGIN_DIR="/boot/config/plugins/${PLUGIN_NAME}"
-STAGE_DIR="/tmp/unraid-vm-assistant-php/2026.08.31.1"
+STAGE_DIR="/tmp/unraid-vm-assistant-php/2026.08.31.2"
 
 if [ ! -d /boot/config/plugins ]; then
   echo "ERROR: This plugin must be installed on Unraid." >&2
@@ -70,12 +70,12 @@ chmod 700 "${PLUGIN_DIR}"
 mkdir -p '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts'
 mkdir -p '/usr/local/emhttp/plugins/unraid-vm-assistant-php'
 mkdir -p '/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib'
-install -m 0755 '/tmp/unraid-vm-assistant-php/2026.08.31.1/src/scripts/vm.sh' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh'
-install -m 0644 '/tmp/unraid-vm-assistant-php/2026.08.31.1/src/VMCreationAssistant.page' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMCreationAssistant.page'
-install -m 0644 '/tmp/unraid-vm-assistant-php/2026.08.31.1/src/VMManagerIntegration.page' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMManagerIntegration.page'
-install -m 0644 '/tmp/unraid-vm-assistant-php/2026.08.31.1/src/lib/VMProvisioner.php' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib/VMProvisioner.php'
-install -m 0755 '/tmp/unraid-vm-assistant-php/2026.08.31.1/src/scripts/create-vm.php' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/create-vm.php'
-install -m 0644 '/tmp/unraid-vm-assistant-php/2026.08.31.1/README.md' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/README.md'
+install -m 0755 '/tmp/unraid-vm-assistant-php/2026.08.31.2/src/scripts/vm.sh' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/vm.sh'
+install -m 0644 '/tmp/unraid-vm-assistant-php/2026.08.31.2/src/VMCreationAssistant.page' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMCreationAssistant.page'
+install -m 0644 '/tmp/unraid-vm-assistant-php/2026.08.31.2/src/VMManagerIntegration.page' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/VMManagerIntegration.page'
+install -m 0644 '/tmp/unraid-vm-assistant-php/2026.08.31.2/src/lib/VMProvisioner.php' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/lib/VMProvisioner.php'
+install -m 0755 '/tmp/unraid-vm-assistant-php/2026.08.31.2/src/scripts/create-vm.php' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/scripts/create-vm.php'
+install -m 0644 '/tmp/unraid-vm-assistant-php/2026.08.31.2/README.md' '/usr/local/emhttp/plugins/unraid-vm-assistant-php/README.md'
 
 rm -rf "${STAGE_DIR}"
 echo "VM Creation Assistant installed under Settings -> User Utilities."
