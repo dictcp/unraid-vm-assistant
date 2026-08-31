@@ -3,7 +3,7 @@ name: Update plugin manifest
 on:
   push:
     tags:
-      - "20??.??.??.*"
+      - "20*.*.*.*"
   workflow_dispatch:
     inputs:
       tag:
