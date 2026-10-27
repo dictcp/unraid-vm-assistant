@@ -1,5 +1,5 @@
 [tools]
-php = "8.4.23"
+php = "8.4"
 
 [tasks.test]
 description = "Run unit tests"
