@@ -34,7 +34,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@2.40.0
         with:
-          php-version: "8.4.23"
+          php-version: "8.5.8"
           extensions: dom
           coverage: none
 
